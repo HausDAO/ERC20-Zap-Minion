@@ -1,5 +1,6 @@
-import "./ProxyFactory";
-import "./CCOZapMinion";
+import "./ProxyFactory.sol";
+import "./CCOZapMinion.sol";
+import "./interfaces/IMOLOCH.sol";
 
 contract ZapMinionFactory is CloneFactory, Ownable {
     
@@ -11,20 +12,27 @@ contract ZapMinionFactory is CloneFactory, Ownable {
         template = _template;
     }
     
-    // @DEV - zapRate should be entered in whole ETH or xDAI
+    
     function summonZapMinion(
-        address _manager, 
-        address _moloch, 
-        address _token, 
-        uint256 _zapRate, 
-        uint256 _startTime, 
-        uint256 _endTime, 
-        uint256 _maxContrib,
-        uint256 _ccoMax,
-        string memory _ZAP_DETAILS
+        address _manager, // CCO manager
+        address _moloch, // CCO DAO
+        address _token, // CCO token
+        uint256 _zapRate, // must be 1*10^18 or more 
+        uint256 _startTime, // must be in the future
+        uint256 _endTime, // must be after startTime
+        uint256 _maxContrib, // limit on tokens a new member can submit
+        uint256 _ccoMax, // limit on the total raised by the contract
+        string memory _ZAP_DETAILS // Name of new minion 
     ) external returns (address) {
         
-        string memory name = "Zap minion";
+       (, uint256 shares,,,,) = IMOLOCH(_moloch).members(_manager);
+       
+       require(shares > 0, "ZAPFac::manager != member"); // Checks manager is a member of the moloch
+       require(IMOLOCH(_moloch).tokenWhitelist(_token), "ZAPFac::token !whitelisted"); //Checks the token is whitelisted
+        
+        string memory name = "CCO Zap minion"; //For Subgraph Data
+        
+        //Summons new minion
         CCOZapMinion zapminion = CCOZapMinion(createClone(template));
         zapminion.init(_manager, _moloch, _token, _zapRate, _startTime, _endTime, _maxContrib, _ccoMax, _ZAP_DETAILS );
         
