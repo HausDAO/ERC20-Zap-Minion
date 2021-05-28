@@ -94,24 +94,26 @@ contract CCOZapMinion is ReentrancyGuard {
         ccoFunds = 0;
         ZAP_DETAILS = _ZAP_DETAILS;
         initialized = true; 
+        
+        IERC20ApproveTransfer(_token).approve(_moloch, type(uint256).max); // Go ahead and approve moloch to spend token
     }
     
     /**
      * Contribute function for ppl to give to a CCO 
      * Caller submits a membership prooposal for loot to the CCO DAO
-     * @param zapToken The CCO contribution token 
      * @param amount The amount of token user wants to give
      **/
     
-    function contribute(address zapToken, uint256 amount) external nonReentrant returns (uint256) { 
+    function contribute(uint256 amount) external nonReentrant returns (uint256) { 
 
         require(amount % 10**18  == 0, "CCOZap:: less than whoe token");
         require(amount >= zapRate && amount % zapRate  == 0, "CCOZap::no fractional shares");
         require(amount <= maxContrib && amount + contribution[msg.sender] <= maxContrib, "CCOZap:: give less");
         require(ccoFunds + amount <= ccoMax, "CCOZap:: CCO full");
-        require(zapToken == token, "CCOZap::!token");
         require(block.timestamp >= startTime, "CCOZap:: !started");
         require(block.timestamp <= endTime, "CCOZap:: ended");
+        
+        IERC20ApproveTransfer(token).transferFrom(msg.sender, address(this), amount); // move funds from user to minion 
         
         uint256 proposalId = moloch.submitProposal(
             msg.sender,
@@ -220,6 +222,8 @@ contract CCOZapMinion is ReentrancyGuard {
         manager = update.manager;
         token = update.token;
         ZAP_DETAILS = update.newDetails; 
+        
+        IERC20ApproveTransfer(update.token).approve(address(moloch), type(uint256).max);
         
      emit UpdateImplemented(true);
      return true;
